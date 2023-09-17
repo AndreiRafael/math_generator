@@ -64,6 +64,16 @@ static MatData mat_data_create(MatDims dim) {
     return data;
 }
 
+static void print_copy(FileData f, MatData m) {
+    //identity header
+    fprintf(f.header, "void hf_%s_copy(%s mat, %s out);\n", m.prefix, m.name, m.name);
+
+    //identity source
+    fprintf(f.source, "\nvoid hf_%s_copy(%s mat, %s out) {\n", m.prefix, m.name, m.name);
+    fprintf(f.source, "\tmemcpy(out, mat, sizeof(out[0][0]) * %d);\n", m.dim.w * m.dim.h);
+    fprintf(f.source, "}\n");
+}
+
 static void print_identity(FileData f_data, MatData m_data) {
     if(m_data.dim.w != m_data.dim.h) {
         return;
@@ -96,7 +106,7 @@ static void print_identity(FileData f_data, MatData m_data) {
 
     fprintf(f_data.source,
         "\t};\n"
-        "\tmemcpy(out, values, sizeof(float) * %d);\n"
+        "\tmemcpy(out, values, sizeof(out[0][0]) * %d);\n"
         "}\n",
         m_data.dim.w * m_data.dim.h
     );
@@ -128,7 +138,7 @@ static void print_transpose(FileData f_data, MatData m_data) {
         "\t\t\ttmp[i][j] = mat[j][i];\n"
         "\t\t}\n"
         "\t}\n"
-        "\tmemcpy(out, tmp, sizeof(float) * %d);\n",
+        "\tmemcpy(out, tmp, sizeof(out[0][0]) * %d);\n",
         m_data.dim.w, m_data.dim.h, m_data.dim.w * m_data.dim.h
     );
 
@@ -173,7 +183,7 @@ static void print_determinant(FileData f_data, MatData m_data) {
         for(int i = 0; i < m_data.dim.w ; i++) {
             for(int j = 0; j < (m_data.dim.w - 1); j++) {
                 int col = i <= j ? (j + 1) : j;
-                fprintf(f_data.source, "\tmemcpy(&mat_%d[%d][0], &mat[%d][1], sizeof(float) * %d);\n", i, j, col, m_data.dim.w - 1);
+                fprintf(f_data.source, "\tmemcpy(&mat_%d[%d][0], &mat[%d][1], sizeof(mat[0][0]) * %d);\n", i, j, col, m_data.dim.w - 1);
             }
         }
 
@@ -347,7 +357,7 @@ static void print_multiply(FileData f, MatData a, MatData b) {
         "\t\t\ttmp[i][j] = val;\n"//8
         "\t\t}\n"//9
         "\t}\n"//10
-        "\tmemcpy(out, tmp, sizeof(float) * %d);\n"//11
+        "\tmemcpy(out, tmp, sizeof(out[0][0]) * %d);\n"//11
         "}\n"
         ,
         a.prefix, b.prefix, a.name, b.name, data_res.name,//0
@@ -367,6 +377,7 @@ static void print_typedef(FileData f, MatData m) {
 }
 
 static void print_functions(FileData f, MatData m) {
+    print_copy(f, m);
     print_identity(f, m);
     print_transpose(f, m);
     print_determinant(f, m);
