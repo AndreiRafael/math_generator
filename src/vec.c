@@ -105,6 +105,40 @@ static void print_divide(FileData f, VecData v) {
     fprintf(f.source, "}\n");
 }
 
+static void print_normalize(FileData f, VecData v) {
+    switch(v.def.type) {//not available for int types
+        case VECTYPE_INT:
+            return;
+        default:
+            break;
+    }
+
+    fprintf(f.header, "void hf_%s_normalize(%s vec, %s out);\n", v.prefix, v.name, v.name);
+
+    fprintf(f.source, "\nvoid hf_%s_normalize(%s vec, %s out) {\n", v.prefix, v.name, v.name);
+    fprintf(f.source, "\thf_%s_divide(vec, hf_%s_magnitude(vec), out);\n", v.prefix, v.prefix);
+    fprintf(f.source, "}\n");
+}
+
+static void print_lerp(FileData f, VecData v) {
+    char literal_suffix[32];
+    switch(v.def.type) {
+        case VECTYPE_FLOAT:
+            strcpy(literal_suffix, ".f");
+            break;
+        default:
+            return;
+    }
+
+    fprintf(f.header, "void hf_%s_lerp(%s a, %s b, %s t, %s out);\n", v.prefix, v.name, v.name, v.type, v.name);
+
+    fprintf(f.source, "\nvoid hf_%s_lerp(%s a, %s b, %s t, %s out) {\n", v.prefix, v.name, v.name, v.type, v.name);
+    for(int i = 0; i < v.def.components; i++) {
+        fprintf(f.source, "\tout[%d] = a[%d] * (1%s - t) + b[%d] * t;\n", i, i, literal_suffix, i);
+    }
+    fprintf(f.source, "}\n");
+}
+
 static void print_sqrmag(FileData f, VecData v) {
     fprintf(f.header, "%s hf_%s_square_magnitude(%s vec);\n", v.type, v.prefix, v.name);
 
@@ -184,6 +218,8 @@ static void print_functions(FileData f, VecData v) {
     print_subtract(f, v);
     print_multiply(f, v);
     print_divide(f, v);
+    print_normalize(f, v);
+    print_lerp(f, v);
     print_sqrmag(f, v);
     print_mag(f, v);
     print_dot(f, v);
