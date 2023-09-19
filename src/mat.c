@@ -5,8 +5,8 @@
 #include "shared.h"
 
 typedef struct MatDimensions_s {
-    int w;
-    int h;
+    int rows;
+    int cols;
 } MatDims;
 
 typedef struct MatData_s {
@@ -38,11 +38,11 @@ static MatDims matrix_dims[] = {
 };
 
 //checks wether a matrix dimension is available from the list of dimensions
-static bool check_compatibility(int w, int h) {
+static bool check_compatibility(int rows, int cols) {
     size_t count = sizeof(matrix_dims) / sizeof(matrix_dims[0]);
     for(size_t i = 0; i < count; i++) {
         MatDims dim = matrix_dims[i];
-        if(dim.w == w && dim.h == h) {
+        if(dim.rows == rows && dim.cols == cols) {
             return true;
         }
     }
@@ -52,13 +52,13 @@ static bool check_compatibility(int w, int h) {
 static MatData mat_data_create(MatDims dim) {
     MatData data;
     data.dim = dim;
-    if(dim.w == dim.h) {
-        sprintf(data.name, "HF_Mat%df", dim.w);
-        sprintf(data.prefix, "mat%df", dim.w);
+    if(dim.rows == dim.cols) {
+        sprintf(data.name, "HF_Mat%df", dim.rows);
+        sprintf(data.prefix, "mat%df", dim.rows);
     }
     else {
-        sprintf(data.name, "HF_Mat%dx%df", dim.w, dim.h);
-        sprintf(data.prefix, "mat%dx%df", dim.w, dim.h);
+        sprintf(data.name, "HF_Mat%dx%df", dim.rows, dim.cols);
+        sprintf(data.prefix, "mat%dx%df", dim.rows, dim.cols);
     }
 
     return data;
@@ -70,12 +70,12 @@ static void print_copy(FileData f, MatData m) {
 
     //identity source
     fprintf(f.source, "\nvoid hf_%s_copy(%s mat, %s out) {\n", m.prefix, m.name, m.name);
-    fprintf(f.source, "\tmemcpy(out, mat, sizeof(out[0][0]) * %d);\n", m.dim.w * m.dim.h);
+    fprintf(f.source, "\tmemcpy(out, mat, sizeof(out[0][0]) * %d);\n", m.dim.rows * m.dim.cols);
     fprintf(f.source, "}\n");
 }
 
 static void print_identity(FileData f_data, MatData m_data) {
-    if(m_data.dim.w != m_data.dim.h) {
+    if(m_data.dim.rows != m_data.dim.cols) {
         return;
     }
 
@@ -93,11 +93,11 @@ static void print_identity(FileData f_data, MatData m_data) {
         m_data.prefix, m_data.name
     );
 
-    for(int row = 0; row < m_data.dim.h; row++) {
+    for(int row = 0; row < m_data.dim.cols; row++) {
         fprintf(f_data.source, "\t\t");
-        for(int col = 0; col < m_data.dim.w; col++) {
+        for(int col = 0; col < m_data.dim.rows; col++) {
             fprintf(f_data.source, col == row ? "1.f," : "0.f,");
-            if(col < (m_data.dim.w - 1)) {
+            if(col < (m_data.dim.rows - 1)) {
                 fprintf(f_data.source, " ");
             }
         }
@@ -108,13 +108,13 @@ static void print_identity(FileData f_data, MatData m_data) {
         "\t};\n"
         "\tmemcpy(out, values, sizeof(out[0][0]) * %d);\n"
         "}\n",
-        m_data.dim.w * m_data.dim.h
+        m_data.dim.rows * m_data.dim.cols
     );
 }
 
 static void print_transpose(FileData f_data, MatData m_data) {
-    MatData other_data = mat_data_create((MatDims) { .w = m_data.dim.h, .h = m_data.dim.w });
-    if(!check_compatibility(other_data.dim.w, other_data.dim.h)) {
+    MatData other_data = mat_data_create((MatDims) { .rows = m_data.dim.cols, .cols = m_data.dim.rows });
+    if(!check_compatibility(other_data.dim.rows, other_data.dim.cols)) {
         return;
     }
 
@@ -139,14 +139,14 @@ static void print_transpose(FileData f_data, MatData m_data) {
         "\t\t}\n"
         "\t}\n"
         "\tmemcpy(out, tmp, sizeof(out[0][0]) * %d);\n",
-        m_data.dim.w, m_data.dim.h, m_data.dim.w * m_data.dim.h
+        m_data.dim.rows, m_data.dim.cols, m_data.dim.rows * m_data.dim.cols
     );
 
     fprintf(f_data.source, "}\n");
 }
 
 static void print_determinant(FileData f_data, MatData m_data) {
-    if(m_data.dim.w != m_data.dim.h) {
+    if(m_data.dim.rows != m_data.dim.cols) {
         return;
     }
 
@@ -163,32 +163,32 @@ static void print_determinant(FileData f_data, MatData m_data) {
         m_data.prefix, m_data.name
     );
 
-    if(m_data.dim.w == 2) {//hand made logic
+    if(m_data.dim.rows == 2) {//hand made logic
         fprintf(f_data.source,
             "\n"
             "\treturn mat[0][0] * mat[1][1] - mat[1][0] * mat[0][1];\n"
         );
     }
     else {//recursive logic, det(mat_nxn) = mat[0][0] * det(mat_n-1xn-1) - mat[1][0] * det(mat_n-1xn-1) + (...)
-        MatData n_minus_one = mat_data_create((MatDims) { .w = m_data.dim.w - 1, .h = m_data.dim.h - 1 });
+        MatData n_minus_one = mat_data_create((MatDims) { .rows = m_data.dim.rows - 1, .cols = m_data.dim.cols - 1 });
 
         fprintf(f_data.source, "\t%s", n_minus_one.name);
-        for(int i = 0; i < m_data.dim.w; i++) {
+        for(int i = 0; i < m_data.dim.rows; i++) {
             fprintf(f_data.source, " mat_%d", i);
-            if(i < (m_data.dim.w - 1)) {
+            if(i < (m_data.dim.rows - 1)) {
                 fprintf(f_data.source, ",");
             }
         }
         fprintf(f_data.source, ";\n");
-        for(int i = 0; i < m_data.dim.w ; i++) {
-            for(int j = 0; j < (m_data.dim.w - 1); j++) {
+        for(int i = 0; i < m_data.dim.rows ; i++) {
+            for(int j = 0; j < (m_data.dim.rows - 1); j++) {
                 int col = i <= j ? (j + 1) : j;
-                fprintf(f_data.source, "\tmemcpy(&mat_%d[%d][0], &mat[%d][1], sizeof(mat[0][0]) * %d);\n", i, j, col, m_data.dim.w - 1);
+                fprintf(f_data.source, "\tmemcpy(&mat_%d[%d][0], &mat[%d][1], sizeof(mat[0][0]) * %d);\n", i, j, col, m_data.dim.rows - 1);
             }
         }
 
         fprintf(f_data.source, "\treturn");
-        for(int i = 0; i < m_data.dim.w; i++) {
+        for(int i = 0; i < m_data.dim.rows; i++) {
             fprintf(f_data.source, (i % 2) == 0 ? "\n\t\t+(" : "\n\t\t-(");
             fprintf(f_data.source, "mat[%d][0] * hf_%s_determinant(mat_%d)", i, n_minus_one.prefix, i);
             fprintf(f_data.source, ")");
@@ -199,7 +199,7 @@ static void print_determinant(FileData f_data, MatData m_data) {
 }
 
 static void print_minor(FileData f_data, MatData m_data) {
-    if(m_data.dim.w != m_data.dim.h) {
+    if(m_data.dim.rows != m_data.dim.cols) {
         return;
     }
     //minor header
@@ -215,11 +215,11 @@ static void print_minor(FileData f_data, MatData m_data) {
         m_data.prefix, m_data.name
     );
 
-    if(m_data.dim.w == 2) {
+    if(m_data.dim.rows == 2) {
         fprintf(f_data.source, "\treturn mat[1 - i][1 - j];\n");
     }
     else {
-        MatData m_n_minus_one = mat_data_create((MatDims) { .w = m_data.dim.w - 1, .h = m_data.dim.h - 1 });
+        MatData m_n_minus_one = mat_data_create((MatDims) { .rows = m_data.dim.rows - 1, .cols = m_data.dim.cols - 1 });
         fprintf(f_data.source, "\t%s mat_sub;\n", m_n_minus_one.name);
         fprintf(f_data.source,
         "\tint row = 0;\n"
@@ -237,7 +237,7 @@ static void print_minor(FileData f_data, MatData m_data) {
         "\t\t}\n"
         "\t\trow++;\n"
         "\t}\n",
-        m_data.dim.w, m_data.dim.h);
+        m_data.dim.rows, m_data.dim.cols);
         fprintf(f_data.source, "\treturn hf_%s_determinant(mat_sub);\n", m_n_minus_one.prefix);
     }
 
@@ -245,7 +245,7 @@ static void print_minor(FileData f_data, MatData m_data) {
 }
 
 static void print_inverse(FileData f_data, MatData m_data) {
-    if(m_data.dim.w != m_data.dim.h) {
+    if(m_data.dim.rows != m_data.dim.cols) {
         return;
     }
     //minor header
@@ -275,7 +275,7 @@ static void print_inverse(FileData f_data, MatData m_data) {
         "\t\t\tout[j][i] = ((i + j) %% 2 == 0 ? 1.f : -1.f) * hf_%s_minor(mat, i, j);\n"
         "\t\t}\n"
         "\t}\n",
-        m_data.dim.w, m_data.dim.h, m_data.prefix
+        m_data.dim.rows, m_data.dim.cols, m_data.prefix
     );
     fprintf(f_data.source,
         "\thf_%s_multiply(out, 1.f / det, out);\n",
@@ -302,8 +302,8 @@ static void print_scalar(FileData f, MatData m) {
         "\t}\n"
         "}\n",
         m.prefix, m.name, m.name,
-        m.dim.w,
-        m.dim.h
+        m.dim.rows,
+        m.dim.cols
     );
 }
 
@@ -326,14 +326,14 @@ static void print_add(FileData f, MatData m) {
         "}\n"
         ,
         m.prefix, m.name, m.name, m.name,//0
-        m.dim.w,//2
-        m.dim.h//3
+        m.dim.rows,//2
+        m.dim.cols//3
     );
 }
 
 static void print_multiply(FileData f, MatData a, MatData b) {
-    MatData data_res = mat_data_create((MatDims) { a.dim.w, b.dim.h });
-    if(!check_compatibility(data_res.dim.w, data_res.dim.h)) {
+    MatData data_res = mat_data_create((MatDims) { a.dim.rows, b.dim.cols });
+    if(!check_compatibility(data_res.dim.rows, data_res.dim.cols)) {
         return;
     }
 
@@ -362,17 +362,17 @@ static void print_multiply(FileData f, MatData a, MatData b) {
         ,
         a.prefix, b.prefix, a.name, b.name, data_res.name,//0
         data_res.name,//1
-        data_res.dim.w,//2
-        data_res.dim.h,//3
-        a.dim.w,//5
-        data_res.dim.w * data_res.dim.h//11
+        data_res.dim.rows,//2
+        data_res.dim.cols,//3
+        b.dim.rows,//5
+        data_res.dim.rows * data_res.dim.cols//11
     );
 }
 
 static void print_typedef(FileData f, MatData m) {
     fprintf(f.header,
         "typedef float %s[%d][%d];\n",
-        m.name, m.dim.w, m.dim.h
+        m.name, m.dim.rows, m.dim.cols
     );
 }
 
@@ -389,7 +389,7 @@ static void print_functions(FileData f, MatData m) {
     size_t num_mats = sizeof(matrix_dims) / sizeof(matrix_dims[0]);
     for(size_t i = 0; i < num_mats; i++) {//generate multiply functions for each compatible matrix dimension
         MatDims dim_b = matrix_dims[i];
-        if(m.dim.h == dim_b.w) {//compatible
+        if(m.dim.cols == dim_b.rows) {//compatible
             MatData b = mat_data_create(dim_b);
             print_multiply(f, m, b);
         }
