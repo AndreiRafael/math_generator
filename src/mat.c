@@ -53,11 +53,11 @@ static MatData mat_data_create(MatDims dim) {
     MatData data;
     data.dim = dim;
     if(dim.rows == dim.cols) {
-        sprintf(data.name, "HF_Mat%df", dim.rows);
+        sprintf(data.name, "hf_mat%df", dim.rows);
         sprintf(data.prefix, "mat%df", dim.rows);
     }
     else {
-        sprintf(data.name, "HF_Mat%dx%df", dim.rows, dim.cols);
+        sprintf(data.name, "hf_mat%dx%df", dim.rows, dim.cols);
         sprintf(data.prefix, "mat%dx%df", dim.rows, dim.cols);
     }
 

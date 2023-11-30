@@ -4,58 +4,66 @@
 
 #include "shared.h"
 
-typedef enum VecType_e {
-    VECTYPE_FLOAT,
-    VECTYPE_INT,
-} VecType;
+typedef enum vec_type_e {
+    vec_type_int,
+    vec_type_float,
+    vec_type_double,
+} vec_type;
 
-typedef struct VecDef_s {
-    VecType type;
+typedef struct vec_def_s {
+    vec_type type;
     int components;
-} VecDef;
+} vec_def;
 
-typedef struct VecData_s {
+typedef struct vec_data_s {
     char name[32];
     char prefix[32];
     char type[32];
 
-    VecDef def;
-} VecData;
+    vec_def def;
+} vec_data;
 
-static VecData vec_data_create(VecDef def) {
-    VecData out;
+static vec_data vec_data_create(vec_def def) {
+    vec_data out;
 
     char type_suffix[32];
     switch(def.type) {
-        case VECTYPE_FLOAT:
+        case vec_type_float:
             strcpy(type_suffix, "f");
             sprintf(out.type, "float");
+            break;
+        case vec_type_double:
+            strcpy(type_suffix, "d");
+            sprintf(out.type, "double");
             break;
         default://fallback to int
             strcpy(type_suffix, "i");
             sprintf(out.type, "int");
             break;
     }
-    sprintf(out.name, "HF_Vec%d%s", def.components, type_suffix);
+    sprintf(out.name, "hf_vec%d%s", def.components, type_suffix);
     sprintf(out.prefix, "vec%d%s", def.components, type_suffix);
 
     out.def = def;
     return out;
 }
 
-static VecDef defs[] = {
-    { VECTYPE_FLOAT, 2 },
-    { VECTYPE_INT, 2 },
+static vec_def defs[] = {
+    { vec_type_float, 2 },
+    { vec_type_int, 2 },
 
-    { VECTYPE_FLOAT, 3 },
-    { VECTYPE_INT, 3 },
+    { vec_type_float, 3 },
+    { vec_type_int, 3 },
+
+    { vec_type_float, 4 },
+    { vec_type_int, 4 },
 };
 
-static void print_typedef(FileData f, VecData v) {
+static void print_typedef(FileData f, vec_data v) {
     fprintf(f.header, "typedef %s %s[%d];\n", v.type, v.name, v.def.components);
 }
 
-static void print_copy(FileData f, VecData v) {
+static void print_copy(FileData f, vec_data v) {
     //copy header
     fprintf(f.header, "void hf_%s_copy(%s vec, %s out);\n", v.prefix, v.name, v.name);
 
@@ -65,7 +73,7 @@ static void print_copy(FileData f, VecData v) {
     fprintf(f.source, "}\n");
 }
 
-static void print_add(FileData f, VecData v) {
+static void print_add(FileData f, vec_data v) {
     fprintf(f.header, "void hf_%s_add(%s a, %s b, %s out);\n", v.prefix, v.name, v.name, v.name);
 
     fprintf(f.source, "\nvoid hf_%s_add(%s a, %s b, %s out) {\n", v.prefix, v.name, v.name, v.name);
@@ -75,7 +83,7 @@ static void print_add(FileData f, VecData v) {
     fprintf(f.source, "}\n");
 }
 
-static void print_subtract(FileData f, VecData v) {
+static void print_subtract(FileData f, vec_data v) {
     fprintf(f.header, "void hf_%s_subtract(%s a, %s b, %s out);\n", v.prefix, v.name, v.name, v.name);
 
     fprintf(f.source, "\nvoid hf_%s_subtract(%s a, %s b, %s out) {\n", v.prefix, v.name, v.name, v.name);
@@ -85,7 +93,7 @@ static void print_subtract(FileData f, VecData v) {
     fprintf(f.source, "}\n");
 }
 
-static void print_multiply(FileData f, VecData v) {
+static void print_multiply(FileData f, vec_data v) {
     fprintf(f.header, "void hf_%s_multiply(%s vec, %s scalar, %s out);\n", v.prefix, v.name, v.type, v.name);
 
     fprintf(f.source, "\nvoid hf_%s_multiply(%s vec, %s scalar, %s out) {\n", v.prefix, v.name, v.type, v.name);
@@ -95,7 +103,7 @@ static void print_multiply(FileData f, VecData v) {
     fprintf(f.source, "}\n");
 }
 
-static void print_divide(FileData f, VecData v) {
+static void print_divide(FileData f, vec_data v) {
     fprintf(f.header, "void hf_%s_divide(%s vec, %s scalar, %s out);\n", v.prefix, v.name, v.type, v.name);
 
     fprintf(f.source, "\nvoid hf_%s_divide(%s vec, %s scalar, %s out) {\n", v.prefix, v.name, v.type, v.name);
@@ -105,9 +113,9 @@ static void print_divide(FileData f, VecData v) {
     fprintf(f.source, "}\n");
 }
 
-static void print_normalize(FileData f, VecData v) {
+static void print_normalize(FileData f, vec_data v) {
     switch(v.def.type) {//not available for int types
-        case VECTYPE_INT:
+        case vec_type_int:
             return;
         default:
             break;
@@ -120,10 +128,10 @@ static void print_normalize(FileData f, VecData v) {
     fprintf(f.source, "}\n");
 }
 
-static void print_lerp(FileData f, VecData v) {
+static void print_lerp(FileData f, vec_data v) {
     char literal_suffix[32];
     switch(v.def.type) {
-        case VECTYPE_FLOAT:
+        case vec_type_float:
             strcpy(literal_suffix, ".f");
             break;
         default:
@@ -139,7 +147,7 @@ static void print_lerp(FileData f, VecData v) {
     fprintf(f.source, "}\n");
 }
 
-static void print_sqrmag(FileData f, VecData v) {
+static void print_sqrmag(FileData f, vec_data v) {
     fprintf(f.header, "%s hf_%s_square_magnitude(%s vec);\n", v.type, v.prefix, v.name);
 
     fprintf(f.source, "\n%s hf_%s_square_magnitude(%s vec) {\n", v.type, v.prefix, v.name);
@@ -154,7 +162,7 @@ static void print_sqrmag(FileData f, VecData v) {
     fprintf(f.source, "}\n");
 }
 
-static void print_mag(FileData f, VecData v) {
+static void print_mag(FileData f, vec_data v) {
     char ret_type[32];
     char sqr_func[32];
     switch(v.def.type) {
@@ -165,7 +173,7 @@ static void print_mag(FileData f, VecData v) {
     }
     char cast[32];
     switch(v.def.type) {
-        case VECTYPE_INT://float and int
+        case vec_type_int://float and int
             sprintf(cast, "(float)");
             break;
         default:
@@ -180,7 +188,7 @@ static void print_mag(FileData f, VecData v) {
     fprintf(f.source, "}\n");
 }
 
-static void print_dot(FileData f, VecData v) {
+static void print_dot(FileData f, vec_data v) {
     fprintf(f.header, "%s hf_%s_dot(%s a, %s b);\n", v.type, v.prefix, v.name, v.name);
 
     fprintf(f.source, "\n%s hf_%s_dot(%s a, %s b) {\n", v.type, v.prefix, v.name, v.name);
@@ -195,7 +203,7 @@ static void print_dot(FileData f, VecData v) {
     fprintf(f.source, "}\n");
 }
 
-static void print_cross(FileData f, VecData v) {
+static void print_cross(FileData f, vec_data v) {
     if(v.def.components != 3) {
         return;
     }
@@ -211,7 +219,7 @@ static void print_cross(FileData f, VecData v) {
     fprintf(f.source, "}\n");
 }
 
-static void print_functions(FileData f, VecData v) {
+static void print_functions(FileData f, vec_data v) {
     fprintf(f.header, "\n");
     print_copy(f, v);
     print_add(f, v);
@@ -251,7 +259,7 @@ void create_vec(void) {
     }
 
     for(size_t i = 0; i < count; i++) {
-        VecData v_data = vec_data_create(defs[i]);
+        vec_data v_data = vec_data_create(defs[i]);
         print_functions(file_data, v_data);
     }
 
