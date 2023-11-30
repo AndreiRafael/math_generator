@@ -49,14 +49,17 @@ static vec_data vec_data_create(vec_def def) {
 }
 
 static vec_def defs[] = {
-    { vec_type_float, 2 },
     { vec_type_int, 2 },
+    { vec_type_float, 2 },
+    { vec_type_double, 2 },
 
-    { vec_type_float, 3 },
     { vec_type_int, 3 },
+    { vec_type_float, 3 },
+    { vec_type_double, 3 },
 
-    { vec_type_float, 4 },
     { vec_type_int, 4 },
+    { vec_type_float, 4 },
+    { vec_type_double, 4 },
 };
 
 static void print_typedef(FileData f, vec_data v) {
