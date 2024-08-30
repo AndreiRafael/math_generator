@@ -65,10 +65,10 @@ static MatData mat_data_create(MatDims dim) {
 }
 
 static void print_copy(FileData f, MatData m) {
-    //identity header
+    //copy header
     fprintf(f.header, "void hf_%s_copy(%s mat, %s out);\n", m.prefix, m.name, m.name);
 
-    //identity source
+    //copy source
     fprintf(f.source, "\nvoid hf_%s_copy(%s mat, %s out) {\n", m.prefix, m.name, m.name);
     fprintf(f.source, "\tmemcpy(out, mat, sizeof(out[0][0]) * %d);\n", m.dim.rows * m.dim.cols);
     fprintf(f.source, "}\n");

@@ -165,29 +165,60 @@ static void print_sqrmag(FileData f, vec_data v) {
     fprintf(f.source, "}\n");
 }
 
-static void print_mag(FileData f, vec_data v) {
-    char ret_type[32];
-    char sqr_func[32];
+static void get_mag_strings(vec_data v, char* ret_type, char* sqr_func, char* cast) {
     switch(v.def.type) {
+        case vec_type_double:
+            sprintf(ret_type, "double");
+            sprintf(sqr_func, "sqrt");
+            break;
         default://float and int
             sprintf(ret_type, "float");
             sprintf(sqr_func, "sqrtf");
             break;
     }
-    char cast[32];
     switch(v.def.type) {
-        case vec_type_int://float and int
+        case vec_type_int:
             sprintf(cast, "(float)");
             break;
         default:
             sprintf(cast, "");
             break;
     }
+}
+
+static void print_mag(FileData f, vec_data v) {
+    char ret_type[32];
+    char sqr_func[32];
+    char cast[32];
+    get_mag_strings(v, ret_type, sqr_func, cast);
 
     fprintf(f.header, "%s hf_%s_magnitude(%s vec);\n", ret_type, v.prefix, v.name);
 
     fprintf(f.source, "\n%s hf_%s_magnitude(%s vec) {\n", ret_type, v.prefix, v.name);
     fprintf(f.source, "\treturn %s(%shf_%s_square_magnitude(vec));\n", sqr_func, cast, v.prefix);
+    fprintf(f.source, "}\n");
+}
+
+static void print_sqrdist(FileData f, vec_data v) {
+    fprintf(f.header, "%s hf_%s_square_distance(%s a, %s b);\n", v.type, v.prefix, v.name, v.name);
+
+    fprintf(f.source, "\n%s hf_%s_square_distance(%s a, %s b) {\n", v.type, v.prefix, v.name, v.name);
+    fprintf(f.source, "\t%s aux;\n", v.name);
+    fprintf(f.source, "\thf_%s_subtract(a, b, aux);\n", v.prefix);
+    fprintf(f.source, "\treturn hf_%s_square_magnitude(aux);\n", v.prefix);
+    fprintf(f.source, "}\n");
+}
+
+static void print_dist(FileData f, vec_data v) {
+    char ret_type[32];
+    char sqr_func[32];
+    char cast[32];
+    get_mag_strings(v, ret_type, sqr_func, cast);
+
+    fprintf(f.header, "%s hf_%s_distance(%s a, %s b);\n", ret_type, v.prefix, v.name, v.name);
+
+    fprintf(f.source, "\n%s hf_%s_distance(%s a, %s b) {\n", ret_type, v.prefix, v.name, v.name);
+    fprintf(f.source, "\treturn %s(%shf_%s_square_distance(a, b));\n", sqr_func, cast, v.prefix);
     fprintf(f.source, "}\n");
 }
 
@@ -233,6 +264,8 @@ static void print_functions(FileData f, vec_data v) {
     print_lerp(f, v);
     print_sqrmag(f, v);
     print_mag(f, v);
+    print_sqrdist(f, v);
+    print_dist(f, v);
     print_dot(f, v);
     print_cross(f, v);
 }
