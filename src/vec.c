@@ -72,7 +72,9 @@ static void print_copy(FileData f, vec_data v) {
 
     //copy source
     fprintf(f.source, "\nvoid hf_%s_copy(%s vec, %s out) {\n", v.prefix, v.name, v.name);
-    fprintf(f.source, "\tmemcpy(out, vec, sizeof(out[0]) * %d);\n", v.def.components);
+    for (int i = 0; i < v.def.components; i++) {
+        fprintf(f.source, "\tout[%d] = vec[%d];\n", i, i);
+    }
     fprintf(f.source, "}\n");
 }
 
@@ -249,7 +251,7 @@ static void print_cross(FileData f, vec_data v) {
     for(int i = 0; i < v.def.components; i++) {
         fprintf(f.source, "\ttmp[%d] = a[%d] * b[%d] - a[%d] * b[%d];\n", i, (i + 1) % v.def.components, (i + 2) % v.def.components, (i + 2) % v.def.components, (i + 1) % v.def.components);
     }
-    fprintf(f.source, "\tmemcpy(out, tmp, sizeof(out[0]) * %d);\n", v.def.components);
+    fprintf(f.source, "\thf_%s_copy(tmp, out);\n", v.prefix);
     fprintf(f.source, "}\n");
 }
 
@@ -283,7 +285,6 @@ void create_vec(void) {
     FILE* source = fopen("./hf_vec.c", "w");
     fprintf(source,
         "#include \"../include/hf_vec.h\"\n\n"
-        "#include <string.h>\n"
         "#include <math.h>\n"
     );
 
