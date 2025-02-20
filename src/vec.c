@@ -68,10 +68,10 @@ static void print_typedef(FileData f, vec_data v) {
 
 static void print_copy(FileData f, vec_data v) {
     //copy header
-    fprintf(f.header, "void hf_%s_copy(%s* restrict vec, %s out);\n", v.type, v.name, v.name);
+    fprintf(f.header, "void hf_%s_copy(%s* restrict vec, %s out);\n", v.prefix, v.type, v.name);
 
     //copy source
-    fprintf(f.source, "\nvoid hf_%s_copy(%s* restrict vec, %s out) {\n", v.type, v.name, v.name);
+    fprintf(f.source, "\nvoid hf_%s_copy(%s* restrict vec, %s out) {\n", v.prefix, v.type, v.name);
     for (int i = 0; i < v.def.components; i++) {
         fprintf(f.source, "\tout[%d] = vec[%d];\n", i, i);
     }
